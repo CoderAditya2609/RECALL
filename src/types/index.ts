@@ -195,3 +195,120 @@ export interface ReviewSessionState {
   resolvedCount: number;
   startTime: number;
 }
+
+// User Profile & People System
+export interface AuthUser {
+  uid: string;
+  username: string;
+  displayName: string;
+  email?: string;
+  photoURL?: string;
+  isAnonymous?: boolean;
+}
+
+export interface AppAccount {
+  id: string;
+  username: string;
+  displayName: string;
+  password?: string;
+  photoURL?: string;
+  createdAt: string;
+  lastActiveAt: string;
+}
+
+export interface PublicUserProfile {
+  id: string; // User ID
+  username: string; // unique handle e.g. "alex_phys", "aditya"
+  displayName: string;
+  photoURL?: string;
+  createdAt: string;
+  lastActiveAt: string;
+}
+
+export interface UserSettings {
+  geminiApiKey?: string;
+  theme?: 'dark' | 'light';
+  dailyTargetMistakes?: number;
+  studyGoal?: string;
+}
+
+// Chat System Types
+export interface Conversation {
+  id: string;
+  participantIds: string[]; // [userA_id, userB_id]
+  participantUsernames: Record<string, string>; // { [userId]: username }
+  participantDisplayNames?: Record<string, string>;
+  lastMessage?: string;
+  lastMessageAt?: string;
+  lastSenderId?: string;
+  createdAt: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderUsername: string;
+  message: string;
+  createdAt: string;
+  read?: boolean;
+}
+
+// Question Bank Types (Public Resource)
+export interface QuestionBankDocument {
+  id: string;
+  uploaderId: string;
+  uploaderUsername: string;
+  title: string;
+  subject: string;
+  chapter?: string;
+  fileType: 'image' | 'pdf';
+  fileSize: number; // in bytes (<= 50MB)
+  fileUrl: string; // cloud url or persistent storage base64
+  totalPages?: number;
+  tags: string[];
+  description?: string;
+  createdAt: string;
+}
+
+// User-Specific Annotation Layer on Question Bank
+export interface DoodleStroke {
+  id: string;
+  tool: 'pen' | 'highlighter' | 'eraser';
+  color: string;
+  width: number;
+  opacity: number;
+  points: { x: number; y: number }[];
+}
+
+export interface DocumentMark {
+  id: string;
+  type: 'star' | 'flag' | 'question' | 'check';
+  x: number; // percentage coordinates 0-100%
+  y: number;
+  note?: string;
+  page?: number;
+}
+
+export interface DocumentHighlight {
+  id: string;
+  page?: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+  note?: string;
+}
+
+export interface QuestionBankAnnotation {
+  id: string;
+  documentId: string;
+  userId: string;
+  strokes: DoodleStroke[];
+  highlights: DocumentHighlight[];
+  marks: DocumentMark[];
+  personalNotes?: string;
+  updatedAt: string;
+}
+

@@ -6,42 +6,37 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Helper function to check if user is owner of the data
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    // 1. App Accounts (Direct username + password student accounts)
+    match /appAccounts/{username} {
+      allow read, write: if isAuthenticated();
     }
 
-    // User profile and subcollections
+    // 2. Private User Profile & Subcollections
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read, write: if isAuthenticated();
 
-      match /subjects/{subjectId} {
-        allow read, write: if isOwner(userId);
+      match /{allSubcollections=**} {
+        allow read, write: if isAuthenticated();
       }
+    }
 
-      match /mistakes/{mistakeId} {
-        allow read, write: if isOwner(userId);
-      }
+    // 3. Public User Directory (Searchable handles and presence)
+    match /publicUsers/{userId} {
+      allow read, write: if isAuthenticated();
+    }
 
-      match /exams/{examId} {
-        allow read, write: if isOwner(userId);
-      }
+    // 4. Study Chat Conversations & Messages
+    match /conversations/{conversationId} {
+      allow read, write: if isAuthenticated();
 
-      match /insights/{insightId} {
-        allow read, write: if isOwner(userId);
+      match /messages/{messageId} {
+        allow read, write: if isAuthenticated();
       }
+    }
 
-      match /calendarEvents/{eventId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      match /reviewSessions/{sessionId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      match /recurringPatterns/{patternId} {
-        allow read, write: if isOwner(userId);
-      }
+    // 5. Public Question Bank Documents
+    match /publicQuestionBank/{docId} {
+      allow read, write: if isAuthenticated();
     }
   }
 }

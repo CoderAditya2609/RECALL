@@ -10,17 +10,13 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Lazy initialize Gemini AI client
-let aiClient: GoogleGenAI | null = null;
-function getGeminiClient(): GoogleGenAI {
-  if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.warn('GEMINI_API_KEY is not set. AI features will operate in fallback heuristic mode.');
-    }
-    aiClient = new GoogleGenAI(apiKey ? { apiKey } : {});
+// Helper to get Gemini AI client with BYOK support
+function getGeminiClientForRequest(userKey?: string): GoogleGenAI | null {
+  const key = (userKey && userKey.trim()) ? userKey.trim() : (process.env.GEMINI_API_KEY || '');
+  if (!key) {
+    return null;
   }
-  return aiClient;
+  return new GoogleGenAI({ apiKey: key });
 }
 
 async function startServer() {
@@ -43,18 +39,17 @@ async function startServer() {
   app.post('/api/gemini/scan-mistakes', async (req, res) => {
     try {
       const { mistakes, subjects, exams } = req.body;
+      const userApiKey = (req.headers['x-gemini-api-key'] as string) || req.body?.userApiKey;
 
       if (!mistakes || !Array.isArray(mistakes) || mistakes.length === 0) {
         return res.status(400).json({ error: 'No mistakes provided for analysis' });
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
+      const client = getGeminiClientForRequest(userApiKey);
+      if (!client) {
         // High quality rule-based fallback if API key is not yet configured
         return res.json(generateLocalHeuristicScan(mistakes));
       }
-
-      const client = getGeminiClient();
 
       const structuredMistakes = mistakes.map((m: any, idx: number) => ({
         id: m.id || `M-${idx + 1}`,
@@ -150,12 +145,13 @@ Return ONLY JSON, with no markdown fences, no explanatory preambles.`;
   app.post('/api/gemini/analyze-mistake', async (req, res) => {
     try {
       const { mistake } = req.body;
+      const userApiKey = (req.headers['x-gemini-api-key'] as string) || req.body?.userApiKey;
       if (!mistake) {
         return res.status(400).json({ error: 'Mistake payload is required' });
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
+      const client = getGeminiClientForRequest(userApiKey);
+      if (!client) {
         return res.json({
           diagnostic: `Review this ${mistake.mistakeType || 'conceptual'} error in ${mistake.topic || 'the topic'}. Focus on mastering the fundamental derivation.`,
           rootCauseType: mistake.mistakeType || 'Conceptual Gap',
@@ -163,8 +159,6 @@ Return ONLY JSON, with no markdown fences, no explanatory preambles.`;
           preventativeRule: 'Write down known constraints explicitly before solving.',
         });
       }
-
-      const client = getGeminiClient();
       const prompt = `You are RECALL's Academic Intelligence Diagnostic Engine.
 A student logged the following mistake:
 Subject: ${mistake.subjectName || ''}
@@ -219,7 +213,7 @@ Return ONLY valid JSON.`;
   app.post('/api/gemini/exam-prep-brief', async (req, res) => {
     try {
       const { exam, mistakes } = req.body;
-      const apiKey = process.env.GEMINI_API_KEY;
+      const userApiKey = (req.headers['x-gemini-api-key'] as string) || req.body?.userApiKey;
 
       const syllabus = exam?.syllabus || [];
       const relevantMistakes = (mistakes || []).filter((m: any) =>
@@ -231,7 +225,8 @@ Return ONLY valid JSON.`;
         )
       );
 
-      if (!apiKey) {
+      const client = getGeminiClientForRequest(userApiKey);
+      if (!client) {
         return res.json({
           title: `Revision Strategy for ${exam?.name || 'Upcoming Exam'}`,
           totalRelevant: relevantMistakes.length,
@@ -246,8 +241,6 @@ Return ONLY valid JSON.`;
           ],
         });
       }
-
-      const client = getGeminiClient();
       const prompt = `You are RECALL's Exam Prep strategist.
 Exam: ${exam?.name || 'Upcoming Exam'}
 Date: ${exam?.date || 'Soon'}

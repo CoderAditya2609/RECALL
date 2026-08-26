@@ -13,6 +13,7 @@ import { db } from '../lib/firebase';
 import {
   collection,
   doc,
+  getDoc,
   setDoc,
   deleteDoc,
   onSnapshot,
@@ -83,7 +84,7 @@ interface AcademicContextType {
 const AcademicContext = createContext<AcademicContextType | undefined>(undefined);
 
 export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, userSettings } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>(INITIAL_SUBJECTS);
   const [mistakes, setMistakes] = useState<Mistake[]>(INITIAL_MISTAKES);
   const [exams, setExams] = useState<Exam[]>(INITIAL_EXAMS);
@@ -96,12 +97,11 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Sync with Firestore if authenticated
   useEffect(() => {
     if (!user) {
-      // Fallback local memory state
       return;
     }
 
     const userId = user.uid;
-
+    const metaDoc = doc(db, `users/${userId}/meta/init`);
     const subjectsCol = collection(db, `users/${userId}/subjects`);
     const mistakesCol = collection(db, `users/${userId}/mistakes`);
     const examsCol = collection(db, `users/${userId}/exams`);
@@ -112,13 +112,24 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // Check if user has initialized data, if not seed it in Firestore
     const initFirestoreUser = async () => {
       try {
-        const subSnap = await getDocs(subjectsCol);
-        if (subSnap.empty) {
+        const metaSnap = await getDoc(metaDoc);
+        if (!metaSnap.exists()) {
+          // Check for legacy localStorage migration data
+          let localMistakes: Mistake[] = [];
+          try {
+            const stored = localStorage.getItem('recall_mistakes') || localStorage.getItem('academic_mistakes');
+            if (stored) {
+              localMistakes = JSON.parse(stored);
+            }
+          } catch {}
+
           const batch = writeBatch(db);
           INITIAL_SUBJECTS.forEach((s) => {
             batch.set(doc(subjectsCol, s.id), s);
           });
-          INITIAL_MISTAKES.forEach((m) => {
+
+          const initialMistakesToSeed = localMistakes.length > 0 ? localMistakes : INITIAL_MISTAKES;
+          initialMistakesToSeed.forEach((m) => {
             batch.set(doc(mistakesCol, m.id), { ...m, userId });
           });
           INITIAL_EXAMS.forEach((e) => {
@@ -133,10 +144,11 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           INITIAL_CALENDAR_EVENTS.forEach((c) => {
             batch.set(doc(calendarCol, c.id), c);
           });
+          batch.set(metaDoc, { initialized: true, seededAt: new Date().toISOString() });
           await batch.commit();
         }
       } catch (err) {
-        console.warn('Firestore initial check (fallback to local state):', err);
+        console.warn('Firestore initial check notice:', err);
       }
     };
 
@@ -150,36 +162,25 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }, (err) => console.warn('Subjects listener notice:', err));
 
     const unsubMistakes = onSnapshot(mistakesCol, (snap) => {
-      if (!snap.empty) {
-        const items = snap.docs.map((d) => ({ ...d.data(), id: d.id } as Mistake));
-        // Sort descending by date
-        items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setMistakes(items);
-      }
+      const items = snap.docs.map((d) => ({ ...d.data(), id: d.id } as Mistake));
+      items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setMistakes(items);
     }, (err) => console.warn('Mistakes listener notice:', err));
 
     const unsubExams = onSnapshot(examsCol, (snap) => {
-      if (!snap.empty) {
-        setExams(snap.docs.map((d) => ({ ...d.data(), id: d.id } as Exam)));
-      }
+      setExams(snap.docs.map((d) => ({ ...d.data(), id: d.id } as Exam)));
     }, (err) => console.warn('Exams listener notice:', err));
 
     const unsubInsights = onSnapshot(insightsCol, (snap) => {
-      if (!snap.empty) {
-        setInsights(snap.docs.map((d) => ({ ...d.data(), id: d.id } as GeminiInsight)));
-      }
+      setInsights(snap.docs.map((d) => ({ ...d.data(), id: d.id } as GeminiInsight)));
     }, (err) => console.warn('Insights listener notice:', err));
 
     const unsubPatterns = onSnapshot(patternsCol, (snap) => {
-      if (!snap.empty) {
-        setRecurringPatterns(snap.docs.map((d) => ({ ...d.data(), id: d.id } as RecurringPattern)));
-      }
+      setRecurringPatterns(snap.docs.map((d) => ({ ...d.data(), id: d.id } as RecurringPattern)));
     }, (err) => console.warn('Patterns listener notice:', err));
 
     const unsubCalendar = onSnapshot(calendarCol, (snap) => {
-      if (!snap.empty) {
-        setCalendarEvents(snap.docs.map((d) => ({ ...d.data(), id: d.id } as CalendarEvent)));
-      }
+      setCalendarEvents(snap.docs.map((d) => ({ ...d.data(), id: d.id } as CalendarEvent)));
     }, (err) => console.warn('Calendar listener notice:', err));
 
     return () => {
@@ -582,7 +583,10 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const response = await fetch('/api/gemini/scan-mistakes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-gemini-api-key': userSettings?.geminiApiKey || '',
+        },
         body: JSON.stringify({ mistakes, subjects, exams }),
       });
 
@@ -650,7 +654,10 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const response = await fetch('/api/gemini/analyze-mistake', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-gemini-api-key': userSettings?.geminiApiKey || '',
+        },
         body: JSON.stringify({ mistake }),
       });
       return await response.json();
@@ -664,7 +671,10 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const response = await fetch('/api/gemini/exam-prep-brief', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-gemini-api-key': userSettings?.geminiApiKey || '',
+        },
         body: JSON.stringify({ exam, mistakes }),
       });
       return await response.json();

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
-import { AcademicProvider, useAcademic } from './context/AcademicContext';
+import { AcademicProvider } from './context/AcademicContext';
+import { ChatProvider } from './context/ChatContext';
+import { QuestionBankProvider } from './context/QuestionBankContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Sidebar } from './components/common/Sidebar';
 import { Header } from './components/common/Header';
@@ -11,11 +13,15 @@ import { ReviewModeView } from './components/review/ReviewModeView';
 import { ExamsView } from './components/exams/ExamsView';
 import { AcademicCalendarView } from './components/calendar/AcademicCalendarView';
 import { InsightsView } from './components/insights/InsightsView';
+import { ChatView } from './components/chat/ChatView';
+import { QuestionBankView } from './components/questionbank/QuestionBankView';
+import { SettingsView } from './components/settings/SettingsView';
+import { AuthModal } from './components/auth/AuthModal';
 import { MistakeModal } from './components/mistakes/MistakeModal';
 import { ExamDetailModal } from './components/exams/ExamDetailModal';
 import { PostExamAnalysisModal } from './components/exams/PostExamAnalysisModal';
 import { ChapterManagerModal } from './components/academics/ChapterManagerModal';
-import { Mistake, Exam } from './types';
+import { Mistake, Exam, QuestionBankDocument } from './types';
 
 type ActiveNavTab =
   | 'dashboard'
@@ -23,12 +29,18 @@ type ActiveNavTab =
   | 'academics'
   | 'review'
   | 'exams'
+  | 'chat'
+  | 'questionbank'
   | 'calendar'
-  | 'insights';
+  | 'insights'
+  | 'settings';
 
 const MainLayout: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveNavTab>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Auth Modal State
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Mistake Modal State
   const [isMistakeModalOpen, setIsMistakeModalOpen] = useState(false);
@@ -65,6 +77,29 @@ const MainLayout: React.FC = () => {
     setIsExamDetailOpen(true);
   };
 
+  const handleOpenMistakeFromDoc = (doc: QuestionBankDocument) => {
+    setEditingMistake({
+      id: '',
+      subjectName: (doc.subject as any) || 'Physics',
+      chapter: doc.chapter || 'Rotational Motion',
+      topic: doc.title || 'General Concept',
+      mistakeType: 'Conceptual',
+      severity: 'Medium',
+      status: 'Unresolved',
+      sourceType: 'Test Series',
+      questionSnippet: `Problem from Question Bank: "${doc.title}"`,
+      whatWentWrong: 'Misconception identified while working through public question bank paper.',
+      correctUnderstanding: '',
+      tags: doc.tags || ['QuestionBank'],
+      solutionImage: doc.fileUrl,
+      occurrences: 1,
+      lastOccurredDate: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    setIsMistakeModalOpen(true);
+  };
+
   return (
     <div className="flex h-screen w-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-hidden font-sans antialiased selection:bg-zinc-900 selection:text-white transition-colors">
       {/* Left Sidebar Navigation */}
@@ -86,6 +121,7 @@ const MainLayout: React.FC = () => {
         <Header
           onOpenNewMistake={handleOpenNewMistake}
           onOpenChapterManager={() => setIsChapterManagerOpen(true)}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
           currentTab={activeTab}
         />
 
@@ -130,6 +166,12 @@ const MainLayout: React.FC = () => {
             />
           )}
 
+          {activeTab === 'chat' && <ChatView />}
+
+          {activeTab === 'questionbank' && (
+            <QuestionBankView onOpenMistakeModalWithDocument={handleOpenMistakeFromDoc} />
+          )}
+
           {activeTab === 'calendar' && (
             <AcademicCalendarView
               onSelectExam={handleSelectExam}
@@ -143,8 +185,13 @@ const MainLayout: React.FC = () => {
               onSelectMistake={handleSelectMistakeToEdit}
             />
           )}
+
+          {activeTab === 'settings' && <SettingsView />}
         </main>
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
 
       {/* Chapter Manager Modal */}
       <ChapterManagerModal
@@ -187,7 +234,11 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <AcademicProvider>
-          <MainLayout />
+          <ChatProvider>
+            <QuestionBankProvider>
+              <MainLayout />
+            </QuestionBankProvider>
+          </ChatProvider>
         </AcademicProvider>
       </AuthProvider>
     </ThemeProvider>

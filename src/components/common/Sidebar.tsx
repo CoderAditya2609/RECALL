@@ -11,6 +11,8 @@ import {
   Plus,
   Search,
   AlertTriangle,
+  MessageSquare,
+  Library,
 } from 'lucide-react';
 import { useAcademic } from '../../context/AcademicContext';
 
@@ -20,6 +22,8 @@ export type NavigationTab =
   | 'academics'
   | 'review'
   | 'exams'
+  | 'chat'
+  | 'questionbank'
   | 'calendar'
   | 'insights'
   | 'settings';
@@ -65,6 +69,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'academics', label: 'Academics', icon: <FolderTree className="w-4 h-4 stroke-[2.2]" /> },
     { id: 'review', label: 'Review', icon: <RotateCcw className="w-4 h-4 stroke-[2.2]" /> },
     { id: 'exams', label: 'Exams', icon: <GraduationCap className="w-4 h-4 stroke-[2.2]" /> },
+    { id: 'chat', label: 'Study Chat', icon: <MessageSquare className="w-4 h-4 stroke-[2.2]" /> },
+    { id: 'questionbank', label: 'Question Bank', icon: <Library className="w-4 h-4 stroke-[2.2]" /> },
     { id: 'calendar', label: 'Calendar', icon: <Calendar className="w-4 h-4 stroke-[2.2]" /> },
     {
       id: 'insights',
@@ -73,6 +79,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       badge: critical3xCount > 0 ? critical3xCount : undefined,
       alertBadge: critical3xCount > 0,
     },
+    { id: 'settings', label: 'Settings', icon: <Settings className="w-4 h-4 stroke-[2.2]" /> },
   ];
 
   return (

@@ -1,15 +1,41 @@
 {
   "entities": {
+    "AppAccount": {
+      "path": "appAccounts/{username}",
+      "description": "Student account credentials (username, display name, password hash, created date)",
+      "fields": {
+        "id": "string",
+        "username": "string",
+        "displayName": "string",
+        "password": "string",
+        "createdAt": "string",
+        "lastActiveAt": "string"
+      }
+    },
     "User": {
       "path": "users/{userId}",
-      "description": "Student profile, preferences and overall stats",
+      "description": "Private student profile, preferences, settings, and Gemini BYOK configuration",
       "fields": {
         "email": "string",
         "displayName": "string",
+        "username": "string",
         "createdAt": "string",
         "totalMistakesCount": "number",
         "unresolvedCount": "number",
+        "geminiApiKey": "string",
         "preferences": "object"
+      }
+    },
+    "PublicUser": {
+      "path": "publicUsers/{userId}",
+      "description": "Public searchable user profile (username, activity status, minimal identifier)",
+      "fields": {
+        "id": "string",
+        "username": "string",
+        "displayName": "string",
+        "photoURL": "string",
+        "createdAt": "string",
+        "lastActiveAt": "string"
       }
     },
     "Subject": {
@@ -89,6 +115,60 @@
         "subject": "string",
         "relatedExamId": "string",
         "completed": "boolean"
+      }
+    },
+    "Conversation": {
+      "path": "conversations/{conversationId}",
+      "description": "Private 1-on-1 chat conversation between two authenticated users",
+      "fields": {
+        "participantIds": "array",
+        "participantUsernames": "object",
+        "lastMessage": "string",
+        "lastMessageAt": "string",
+        "lastSenderId": "string",
+        "createdAt": "string"
+      }
+    },
+    "ChatMessage": {
+      "path": "conversations/{conversationId}/messages/{messageId}",
+      "description": "Encrypted message in a private conversation",
+      "fields": {
+        "senderId": "string",
+        "senderUsername": "string",
+        "message": "string",
+        "createdAt": "string",
+        "read": "boolean"
+      }
+    },
+    "PublicQuestionBankDoc": {
+      "path": "publicQuestionBank/{docId}",
+      "description": "Shared public Question Bank documents (PDFs, images, exam papers up to 50MB)",
+      "fields": {
+        "uploaderId": "string",
+        "uploaderUsername": "string",
+        "title": "string",
+        "subject": "string",
+        "chapter": "string",
+        "fileType": "string",
+        "fileSize": "number",
+        "fileUrl": "string",
+        "totalPages": "number",
+        "tags": "array",
+        "description": "string",
+        "createdAt": "string"
+      }
+    },
+    "UserQuestionBankAnnotation": {
+      "path": "users/{userId}/qbAnnotations/{docId}",
+      "description": "User-specific independent personal annotation layer (highlights, marks, doodles) on a public question bank document",
+      "fields": {
+        "documentId": "string",
+        "userId": "string",
+        "annotations": "array",
+        "highlights": "array",
+        "marks": "array",
+        "doodleData": "string",
+        "updatedAt": "string"
       }
     }
   }
