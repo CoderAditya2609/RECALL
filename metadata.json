@@ -1,0 +1,6 @@
+{
+  "name": "RECALL",
+  "description": "AI-Powered Academic Mistake Intelligence System for recording, analyzing, and detecting patterns in academic errors.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

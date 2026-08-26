@@ -1,0 +1,95 @@
+{
+  "entities": {
+    "User": {
+      "path": "users/{userId}",
+      "description": "Student profile, preferences and overall stats",
+      "fields": {
+        "email": "string",
+        "displayName": "string",
+        "createdAt": "string",
+        "totalMistakesCount": "number",
+        "unresolvedCount": "number",
+        "preferences": "object"
+      }
+    },
+    "Subject": {
+      "path": "users/{userId}/subjects/{subjectId}",
+      "description": "Academic subject taxonomy with chapters and topics",
+      "fields": {
+        "name": "string",
+        "color": "string",
+        "chapters": "array",
+        "createdAt": "string"
+      }
+    },
+    "Mistake": {
+      "path": "users/{userId}/mistakes/{mistakeId}",
+      "description": "Individual academic mistake notebook entry",
+      "fields": {
+        "subjectId": "string",
+        "subjectName": "string",
+        "chapter": "string",
+        "topic": "string",
+        "source": "string",
+        "questionNumber": "string",
+        "questionText": "string",
+        "questionImage": "string",
+        "annotations": "array",
+        "whatWentWrong": "string",
+        "correctApproach": "string",
+        "whyMadeMistake": "string",
+        "takeaway": "string",
+        "mistakeType": "string",
+        "severity": "string",
+        "status": "string",
+        "voiceMemo": "object",
+        "occurrencesCount": "number",
+        "relatedPatternId": "string",
+        "reviewedAt": "string",
+        "createdAt": "string",
+        "updatedAt": "string"
+      }
+    },
+    "Exam": {
+      "path": "users/{userId}/exams/{examId}",
+      "description": "Target exam with syllabus, score reflection, and relevant mistake tracking",
+      "fields": {
+        "name": "string",
+        "date": "string",
+        "targetScore": "number",
+        "actualScore": "number",
+        "totalMarks": "number",
+        "syllabus": "array",
+        "notes": "string",
+        "postExamObservations": "string",
+        "createdAt": "string"
+      }
+    },
+    "Insight": {
+      "path": "users/{userId}/insights/{insightId}",
+      "description": "Gemini-powered diagnostic analysis, pattern alerts, and study prescriptions",
+      "fields": {
+        "type": "string",
+        "title": "string",
+        "content": "string",
+        "detectedAt": "string",
+        "recurringTopic": "string",
+        "mistakeIds": "array",
+        "severity": "string",
+        "recommendedAction": "string"
+      }
+    },
+    "CalendarEvent": {
+      "path": "users/{userId}/calendarEvents/{eventId}",
+      "description": "Academic calendar event, test dates, revision blocks",
+      "fields": {
+        "title": "string",
+        "date": "string",
+        "type": "string",
+        "subject": "string",
+        "relatedExamId": "string",
+        "completed": "boolean"
+      }
+    }
+  }
+}
