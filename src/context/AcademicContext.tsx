@@ -342,7 +342,10 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     if (user) {
       try {
-        await setDoc(doc(db, `users/${user.uid}/subjects`, id), updates, { merge: true });
+        const fullSubject = updated.find((s) => s.id === id);
+        if (fullSubject) {
+          await setDoc(doc(db, `users/${user.uid}/subjects`, id), fullSubject);
+        }
       } catch (err) {
         console.warn('Firestore update subject notice:', err);
       }

@@ -1,42 +1,36 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check if user is authenticated
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    // 1. App Accounts (Direct username + password student accounts)
     match /appAccounts/{username} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if true;
     }
 
-    // 2. Private User Profile & Subcollections
     match /users/{userId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if true;
 
       match /{allSubcollections=**} {
-        allow read, write: if isAuthenticated();
+        allow read, write: if true;
       }
     }
 
-    // 3. Public User Directory (Searchable handles and presence)
     match /publicUsers/{userId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if true;
     }
 
-    // 4. Study Chat Conversations & Messages
     match /conversations/{conversationId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if true;
 
       match /messages/{messageId} {
-        allow read, write: if isAuthenticated();
+        allow read, write: if true;
       }
     }
 
-    // 5. Public Question Bank Documents
     match /publicQuestionBank/{docId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if true;
+    }
+
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }

@@ -3,10 +3,19 @@ import {
   auth,
   db,
   signInAnonymously,
-  onAuthStateChanged,
 } from '../lib/firebase';
 import { doc, getDoc, setDoc, updateDoc, collection, getDocs, onSnapshot } from 'firebase/firestore';
 import { AuthUser, AppAccount, PublicUserProfile, UserSettings } from '../types';
+
+// SHA-256 Password Hashing Utility
+export async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const salt = 'recall_academic_v2_secure_salt_';
+  const data = encoder.encode(salt + password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -60,17 +69,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             const account: AppAccount = JSON.parse(storedAccountRaw);
             if (account && account.username) {
+              const cleanUsername = account.username.toLowerCase();
+              const userId = account.id || `student_${cleanUsername}`;
+
               const authUser: AuthUser = {
-                uid: account.id,
-                username: account.username,
+                uid: userId,
+                username: cleanUsername,
                 displayName: account.displayName || account.username,
                 photoURL: account.photoURL || '',
                 isAnonymous: false,
               };
 
               const profile: PublicUserProfile = {
-                id: account.id,
-                username: account.username,
+                id: userId,
+                username: cleanUsername,
                 displayName: account.displayName || account.username,
                 photoURL: account.photoURL || '',
                 createdAt: account.createdAt || new Date().toISOString(),
@@ -83,7 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               }
 
               // Update Firestore presence in background
-              const publicRef = doc(db, 'publicUsers', account.id);
+              const publicRef = doc(db, 'publicUsers', userId);
               setDoc(publicRef, profile, { merge: true }).catch(() => {});
               setLoading(false);
               return;
@@ -184,12 +196,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const userId = `student_${cleanUsername}`;
       const now = new Date().toISOString();
+      const hashedPassword = await hashPassword(pass);
 
       const newAccount: AppAccount = {
         id: userId,
         username: cleanUsername,
         displayName: finalDisplayName,
-        password: pass,
+        password: hashedPassword,
         createdAt: now,
         lastActiveAt: now,
       };
@@ -211,7 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('Firestore account creation notice:', err);
       }
 
-      // Save to local storage
+      // Save to local storage for persistent session
       localStorage.setItem(LOCAL_ACCOUNT_STORAGE_KEY, JSON.stringify(newAccount));
 
       // Update state
@@ -280,7 +293,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      if (accountData.password && accountData.password !== pass) {
+      const hashedInput = await hashPassword(pass);
+      // Validate against hashed password (or fallback for plain text if existed earlier)
+      const isValidPass =
+        accountData.password === hashedInput || accountData.password === pass;
+
+      if (!isValidPass) {
         setAuthError('Incorrect password. Please try again.');
         return false;
       }
@@ -288,6 +306,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const now = new Date().toISOString();
       const updatedAccount: AppAccount = {
         ...accountData,
+        password: hashedInput, // Ensure upgraded to hash
         lastActiveAt: now,
       };
 
@@ -305,7 +324,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Update Firestore presence in background
       try {
-        await updateDoc(doc(db, 'appAccounts', cleanUsername), { lastActiveAt: now });
+        await updateDoc(doc(db, 'appAccounts', cleanUsername), {
+          password: hashedInput,
+          lastActiveAt: now,
+        });
         await setDoc(doc(db, 'publicUsers', updatedAccount.id), publicUser, { merge: true });
       } catch {}
 
